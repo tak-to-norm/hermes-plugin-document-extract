@@ -1,0 +1,22 @@
+name: document_extract
+version: 0.2.0
+description: "Convert local documents and images to cached Markdown before Hermes Agent reads them."
+author: tak-to-norm
+license: MIT
+kind: standalone
+platforms:
+  - windows
+  - linux
+  - macos
+provides_tools:
+  - document_extract
+  - document_extract_batch
+  - document_extract_status
+  - document_extract_cleanup
+metadata:
+  credits:
+    idea: tak-to-norm
+    implementation: "AI-assisted development with Hermes Agent"
+  third_party:
+    markitdown: "MIT"
+    tesseract_ocr: "Apache-2.0"

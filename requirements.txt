@@ -1,0 +1,2 @@
+markitdown[pdf,docx,pptx,xlsx,xls]>=0.1.6
+Pillow>=10.0.0
