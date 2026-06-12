@@ -1,12 +1,29 @@
-# Hermes Document Extract Plugin
+<p align="center">
+  <img src="assets/logo.png" alt="Hermes Document Extract Plugin logo" width="160" />
+</p>
 
-[English](README.md) | [Русский](README.ru.md)
+<h1 align="center">Hermes Document Extract Plugin</h1>
+
+<p align="center">
+  Локальное извлечение документов и изображений для Hermes Agent: файлы → cached Markdown → текст для агента.
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
+  <a href="README.md">English README</a>
+</p>
 
 Лёгкий плагин для **Hermes Agent**, который конвертирует локальные документы и изображения в cached Markdown перед тем, как агент их читает.
 
 Плагин добавляет native tools для PDF, Office-файлов, HTML/EPUB/таблиц, архивов и OCR текста с изображений — без прямого чтения бинарных файлов моделью.
 
-> Это не официальный плагин Nous Research / Hermes Agent.
+> Сделано под native plugin system [Hermes Agent](https://github.com/NousResearch/hermes-agent). Community plugin; это не официальный плагин Nous Research / Hermes Agent.
+
+## Интеграция с Hermes Agent
+
+Hermes Agent — open-source AI agent framework с инструментами. Этот плагин добавляет document extraction как native Hermes tools, чтобы агент мог сам вызывать их, когда пользователь просит посмотреть локальный PDF, Office-документ, таблицу, презентацию, архив или изображение.
+
+Плагин устанавливается через `hermes plugins install`, регистрируется в существующий toolset `file` и начинает работать в CLI/gateway после restart/reset.
 
 ## Зачем
 
