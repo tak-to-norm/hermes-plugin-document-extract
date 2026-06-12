@@ -5,18 +5,32 @@ No ordinary skill is installed; tool schemas carry the behavior guidance.
 """
 from __future__ import annotations
 
-from .schemas import (
-    DOCUMENT_EXTRACT_BATCH_SCHEMA,
-    DOCUMENT_EXTRACT_CLEANUP_SCHEMA,
-    DOCUMENT_EXTRACT_SCHEMA,
-    DOCUMENT_EXTRACT_STATUS_SCHEMA,
-)
-from .tools import (
-    handle_document_extract,
-    handle_document_extract_batch,
-    handle_document_extract_cleanup,
-    handle_document_extract_status,
-)
+try:
+    from .schemas import (
+        DOCUMENT_EXTRACT_BATCH_SCHEMA,
+        DOCUMENT_EXTRACT_CLEANUP_SCHEMA,
+        DOCUMENT_EXTRACT_SCHEMA,
+        DOCUMENT_EXTRACT_STATUS_SCHEMA,
+    )
+    from .tools import (
+        handle_document_extract,
+        handle_document_extract_batch,
+        handle_document_extract_cleanup,
+        handle_document_extract_status,
+    )
+except ImportError:  # pragma: no cover - allows pytest/dev checks from repo root
+    from schemas import (  # type: ignore
+        DOCUMENT_EXTRACT_BATCH_SCHEMA,
+        DOCUMENT_EXTRACT_CLEANUP_SCHEMA,
+        DOCUMENT_EXTRACT_SCHEMA,
+        DOCUMENT_EXTRACT_STATUS_SCHEMA,
+    )
+    from tools import (  # type: ignore
+        handle_document_extract,
+        handle_document_extract_batch,
+        handle_document_extract_cleanup,
+        handle_document_extract_status,
+    )
 
 
 def register(ctx) -> None:

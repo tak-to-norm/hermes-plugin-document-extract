@@ -20,3 +20,5 @@ metadata:
   third_party:
     markitdown: "MIT"
     tesseract_ocr: "Apache-2.0"
+    tesseract_language_data: "Apache-2.0"
+    pillow: "HPND"

@@ -47,3 +47,31 @@ def test_sensitive_redacts_source(tmp_path, monkeypatch):
     assert payload["source"] == "[redacted]"
     assert payload["preview"] == ""
     assert "private" not in Path(payload["markdown_path"]).name
+
+
+def test_cleanup_requires_all_for_full_delete(tmp_path, monkeypatch):
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes-home"))
+    src = tmp_path / "note.txt"
+    src.write_text("keep me", encoding="utf-8")
+    payload = json.loads(tools.handle_document_extract({"path": str(src), "preview_chars": 0}))
+    assert payload["success"] is True
+
+    dry_run = json.loads(tools.handle_document_extract_cleanup({"expired_only": False, "dry_run": True}))
+    assert dry_run["success"] is True
+    assert dry_run["deleted_count"] == 0
+
+    delete_all = json.loads(tools.handle_document_extract_cleanup({"all": True, "dry_run": True}))
+    assert delete_all["success"] is True
+    assert delete_all["deleted_count"] >= 2
+
+
+def test_batch_schema_requires_path_or_paths():
+    params = schemas.DOCUMENT_EXTRACT_BATCH_SCHEMA["parameters"]
+    assert {"required": ["path"]} in params["anyOf"]
+    assert {"required": ["paths"]} in params["anyOf"]
+
+
+def test_batch_empty_args_return_user_error():
+    payload = json.loads(tools.handle_document_extract_batch({}))
+    assert payload["success"] is False
+    assert "Provide path or paths" in payload["error"]

@@ -6,6 +6,7 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 MODE=""
 ASSUME_YES=0
 SKIP_SYSTEM_INSTALL=0
+TESSDATA_FAST_REF="87416418657359cb625c412a48b6e1d6d41c29bd"
 
 log() { printf '\033[1;34m[document-extract]\033[0m %s\n' "$*"; }
 ok() { printf '\033[1;32m[ok]\033[0m %s\n' "$*"; }
@@ -54,10 +55,14 @@ confirm() {
   if [[ "$ASSUME_YES" == "1" ]]; then
     return 0
   fi
+  if [[ ! -t 0 ]]; then
+    warn "Non-interactive shell: refusing to auto-confirm '$prompt'. Rerun with -y to approve."
+    return 1
+  fi
   local suffix="[Y/n]"
   [[ "$default" =~ ^[Nn]$ ]] && suffix="[y/N]"
   local answer
-  read -r -p "$prompt $suffix " answer || true
+  read -r -p "$prompt $suffix " answer || answer=""
   answer="${answer:-$default}"
   [[ "$answer" =~ ^[Yy]$ ]]
 }
@@ -146,14 +151,6 @@ find_hermes_python() {
       printf '%s' "$candidate"
       return 0
     fi
-  done
-
-  # Last resort: accept an executable explicit override even if Hermes modules are not importable.
-  for candidate in "${candidates[@]}"; do
-    [[ -n "$candidate" && -x "$candidate" ]] || continue
-    warn "Using Python without Hermes module verification: $candidate"
-    printf '%s' "$candidate"
-    return 0
   done
 
   return 1
@@ -385,6 +382,29 @@ PY
   fi
 }
 
+expected_langdata_sha256() {
+  case "$1" in
+    eng) printf '7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2' ;;
+    osd) printf '9cf5d576fcc47564f11265841e5ca839001e7e6f38ff7f7aacf46d15a96b00ff' ;;
+    rus) printf 'e16e5e036cce1d9ec2b00063cf8b54472625b9e14d893a169e2b0dedeb4df225' ;;
+    *) return 1 ;;
+  esac
+}
+
+verify_sha256() {
+  local file="$1"
+  local expected="$2"
+  local hermes_py="$3"
+  "$hermes_py" - "$file" "$expected" <<'PY'
+import hashlib, sys
+path, expected = sys.argv[1], sys.argv[2].lower()
+with open(path, 'rb') as f:
+    actual = hashlib.sha256(f.read()).hexdigest()
+if actual != expected:
+    raise SystemExit(f"SHA256 mismatch for {path}: expected {expected}, got {actual}")
+PY
+}
+
 ensure_langdata() {
   local tess="$1"
   local lang="$2"
@@ -404,8 +424,10 @@ ensure_langdata() {
     return 0
   fi
 
-  local url="https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/main/$lang.traineddata"
-  warn "$lang.traineddata not found locally. Downloading from official tesseract-ocr/tessdata_fast."
+  local checksum
+  checksum="$(expected_langdata_sha256 "$lang")" || die "No pinned checksum for language data: $lang"
+  local url="https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/$TESSDATA_FAST_REF/$lang.traineddata"
+  warn "$lang.traineddata not found locally. Downloading from official tesseract-ocr/tessdata_fast at pinned commit $TESSDATA_FAST_REF."
   if [[ "$lang" == "rus" ]]; then
     if ! confirm "Download Russian OCR data (rus.traineddata)?" "Y"; then
       die "Russian OCR data is required for Full setup."
@@ -413,7 +435,8 @@ ensure_langdata() {
   fi
   download_file "$url" "$dest" "$hermes_py"
   [[ -s "$dest" ]] || die "Downloaded $dest is empty."
-  ok "Downloaded $lang.traineddata"
+  verify_sha256 "$dest" "$checksum" "$hermes_py"
+  ok "Downloaded and verified $lang.traineddata"
 }
 
 ensure_tessdata() {

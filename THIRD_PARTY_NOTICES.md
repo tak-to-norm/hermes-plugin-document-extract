@@ -20,6 +20,7 @@ This plugin can use the following third-party tools and libraries.
 - License: Apache License 2.0
 - Used for optional OCR language data (`eng`, `rus`, `osd`).
 - The setup script may download missing language data into the user's local `~/.hermes/tessdata` directory.
+- Downloads are pinned to a specific upstream commit and verified with SHA-256 checksums.
 
 ## Pillow
 

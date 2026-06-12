@@ -1,6 +1,6 @@
 # Agent handoff
 
-This file is kept for compatibility with older local copies. New users should read [INSTALL.md](INSTALL.md).
+This file is kept for compatibility with older local copies. New users should read [README.md](README.md) or [INSTALL.md](INSTALL.md).
 
 Important constraints:
 
@@ -13,7 +13,18 @@ Recommended install:
 
 ```bash
 hermes plugins install tak-to-norm/hermes-plugin-document-extract --enable
-python -m pip install -r requirements.txt
+cd ~/.hermes/plugins/document_extract
+bash scripts/setup.sh
 ```
 
-For OCR, install Tesseract separately for your operating system.
+For Full OCR setup without interaction:
+
+```bash
+bash scripts/setup.sh --full -y
+```
+
+Verify after restart/reset by calling:
+
+```text
+document_extract_status()
+```

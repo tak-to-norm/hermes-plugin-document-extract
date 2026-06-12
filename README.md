@@ -26,11 +26,11 @@ It is installed with `hermes plugins install`, registers under the existing `fil
 `hermes-plugin-document-extract` adds native Hermes tools that convert local documents and images into Markdown before the agent reads them.
 
 ```text
-PDF / DOCX / image / folder
-        ↓
-document_extract
-        ↓
-~/.hermes/cache/document-extract/*.md
+PDF / DOCX / image file           folder / file list
+        ↓                                ↓
+document_extract                 document_extract_batch
+        ↓                                ↓
+~/.hermes/cache/document-extract/*.md / manifest
         ↓
 Hermes reads the Markdown with read_file
 ```
@@ -124,13 +124,19 @@ hermes gateway restart
 
 ### Manual fallback
 
-Manual installation is not the main path. If the setup script fails, run:
+Manual installation is not the main path. If setup fails, rerun the script with an explicit mode and read the exact missing dependency it reports:
 
 ```bash
+bash scripts/setup.sh --basic
+bash scripts/setup.sh --full
 bash scripts/setup.sh --help
 ```
 
-Then install the missing dependency reported by the script and rerun it.
+If Tesseract is already installed but system package installation is blocked, use:
+
+```bash
+bash scripts/setup.sh --full --skip-system-install
+```
 
 ## Examples
 
@@ -234,11 +240,12 @@ Use `document_extract_cleanup` for manual cleanup. Expired files are also cleane
 
 ## Development
 
-Local plugin install:
+Normal users should install from GitHub with `hermes plugins install`. For local development, clone the repository and run checks from the repo root.
+
+Install development-only test dependencies if needed:
 
 ```bash
-cp -r . ~/.hermes/plugins/document_extract
-hermes plugins enable document_extract
+python -m pip install -r requirements-dev.txt
 ```
 
 Basic checks:
@@ -248,6 +255,8 @@ python -m py_compile tools.py schemas.py __init__.py
 python -m pytest tests -q
 ```
 
+Avoid copying the whole working tree into `~/.hermes/plugins/` during development; that can copy `.git`, caches, logs, or local files. Use `hermes plugins install tak-to-norm/hermes-plugin-document-extract --enable` for normal usage.
+
 ## License
 
 This plugin is released under the [MIT License](LICENSE).
@@ -256,6 +265,7 @@ Third-party tools/libraries:
 
 - MarkItDown — MIT
 - Tesseract OCR — Apache-2.0
+- Tesseract language data — Apache-2.0
 - Pillow — HPND-style open source license
 
 See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

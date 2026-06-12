@@ -78,9 +78,9 @@ def _normalize_path(raw: str) -> Path:
     if not value:
         raise ValueError("path is required")
 
-    # Git Bash / MSYS path: /c/Users/name/file.pdf -> C:/Users/name/file.pdf
+    # Git Bash / MSYS path on Windows: /c/Users/name/file.pdf -> C:/Users/name/file.pdf
     m = re.match(r"^/([a-zA-Z])/(.*)$", value)
-    if m:
+    if os.name == "nt" and m:
         value = f"{m.group(1).upper()}:/{m.group(2)}"
 
     value = os.path.expandvars(os.path.expanduser(value))
@@ -272,8 +272,8 @@ def _extract_with_markitdown(src: Path) -> tuple[str, list[str]]:
     warnings: list[str] = []
     if not _markitdown_available():
         raise DocumentExtractError(
-            "MarkItDown is not installed. Install with: "
-            "python -m pip install -r requirements.txt"
+            "MarkItDown is not installed. Run the plugin setup script: "
+            "bash scripts/setup.sh --basic"
         )
 
     from markitdown import MarkItDown  # lazy dependency
@@ -751,7 +751,7 @@ def _cleanup_cache(
         expires_at = _parse_iso(metadata.get("expires_at"))
         expired = bool(expires_at and expires_at <= now)
         older = bool(cutoff and meta_path.stat().st_mtime <= cutoff)
-        should_delete = expired or older or (not expired_only and older_than_days is None)
+        should_delete = expired or older
         if should_delete:
             for target in targets:
                 considered.add(target)
@@ -828,10 +828,11 @@ def _iter_batch_files(args: dict[str, Any]) -> list[Path]:
         else:
             raise DocumentExtractError(f"Path not found: {p}")
 
-    # Stable order and de-duplicate paths.
+    # Stable order and de-duplicate paths. `normcase` lowercases only on case-insensitive
+    # platforms such as Windows, preserving distinct case-sensitive POSIX paths.
     unique: dict[str, Path] = {}
-    for path in sorted(files, key=lambda x: str(x).lower()):
-        unique[str(path.resolve(strict=False)).lower()] = path
+    for path in sorted(files, key=lambda x: os.path.normcase(str(x.resolve(strict=False)))):
+        unique[os.path.normcase(str(path.resolve(strict=False)))] = path
     return list(unique.values())
 
 
@@ -843,8 +844,8 @@ def handle_document_extract(args: dict, **kw) -> str:
         return tool_error(
             f"document_extract failed: {type(exc).__name__}: {exc}",
             setup_hint=(
-                "Install Python dependencies with: python -m pip install -r requirements.txt. "
-                "Install Tesseract OCR separately for image OCR."
+                "Run setup from the installed plugin directory: bash scripts/setup.sh --basic. "
+                "Use bash scripts/setup.sh --full for image OCR with Tesseract."
             ),
         )
 

@@ -83,7 +83,7 @@ DOCUMENT_EXTRACT_BATCH_SCHEMA = {
     "description": (
         "Extract a folder or a list of local documents/images into cached Markdown files. "
         "Use this when the user asks to process a folder, inbox, or multiple documents. "
-        "Returns a manifest_path and per-file markdown_path values."
+        "Provide either path, paths, or both. Returns a manifest_path and per-file markdown_path values."
     ),
     "parameters": {
         "type": "object",
@@ -115,6 +115,7 @@ DOCUMENT_EXTRACT_BATCH_SCHEMA = {
             **COMMON_EXTRACTION_PROPERTIES,
         },
         "additionalProperties": False,
+        "anyOf": [{"required": ["path"]}, {"required": ["paths"]}],
     },
 }
 
@@ -137,7 +138,7 @@ DOCUMENT_EXTRACT_CLEANUP_SCHEMA = {
             "expired_only": {
                 "type": "boolean",
                 "default": True,
-                "description": "Delete files whose metadata says they have expired.",
+                "description": "Delete files whose metadata says they have expired. Use all=true for full cache deletion; expired_only=false only broadens cleanup when older_than_days is set.",
             },
             "older_than_days": {
                 "type": "number",

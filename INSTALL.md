@@ -1,46 +1,58 @@
 # Install
 
-## From GitHub
+## Recommended setup
 
 ```bash
 hermes plugins install tak-to-norm/hermes-plugin-document-extract --enable
-python -m pip install "markitdown[pdf,docx,pptx,xlsx,xls]>=0.1.6" "Pillow>=10.0.0"
+cd ~/.hermes/plugins/document_extract
+bash scripts/setup.sh
 ```
 
-Install Tesseract for image OCR:
+The setup script asks for one of two modes:
 
-- Windows: `winget install --id tesseract-ocr.tesseract --accept-source-agreements --accept-package-agreements`
-- macOS: `brew install tesseract tesseract-lang`
-- Ubuntu/Debian: `sudo apt-get install tesseract-ocr tesseract-ocr-eng tesseract-ocr-rus`
+```text
+1) Basic — documents only, no OCR
+2) Full  — documents + image OCR with Tesseract
+```
 
-Restart Hermes:
+Non-interactive mode:
+
+```bash
+bash scripts/setup.sh --basic -y
+bash scripts/setup.sh --full -y
+```
+
+Then restart the current Hermes session:
 
 ```text
 /reset
 ```
 
-## Local development install
-
-Copy or symlink this folder to:
-
-```text
-~/.hermes/plugins/document_extract/
-```
-
-Enable:
+For gateway users:
 
 ```bash
-hermes plugins enable document_extract
+hermes gateway restart
 ```
 
-Check:
+## Agent-assisted install
 
-```bash
-hermes plugins list
-```
-
-Ask Hermes:
+You can also give this repo URL to Hermes Agent and ask:
 
 ```text
-Check document_extract status.
+Install this Hermes plugin in Full mode and verify it works:
+https://github.com/tak-to-norm/hermes-plugin-document-extract
+```
+
+The agent should install the plugin, run the setup script, verify `document_extract_status`, and then ask for `/reset` or gateway restart.
+
+## Troubleshooting
+
+```bash
+bash scripts/setup.sh --help
+```
+
+If Tesseract is already installed but system package installation is blocked:
+
+```bash
+bash scripts/setup.sh --full --skip-system-install
 ```
