@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" alt="Hermes Document Extract Plugin logo" width="160" />
+  <img src="assets/logo.png" alt="Логотип Hermes Document Extract Plugin" width="160" />
 </p>
 
 <h1 align="center">Hermes Document Extract Plugin</h1>
@@ -13,179 +13,195 @@
   <a href="README.md">English README</a>
 </p>
 
-Лёгкий плагин для **Hermes Agent**, который конвертирует локальные документы и изображения в cached Markdown перед тем, как агент их читает.
-
-Плагин добавляет native tools для PDF, Office-файлов, HTML/EPUB/таблиц, архивов и OCR текста с изображений — без прямого чтения бинарных файлов моделью.
-
 > Сделано под native plugin system [Hermes Agent](https://github.com/NousResearch/hermes-agent). Community plugin; это не официальный плагин Nous Research / Hermes Agent.
 
 ## Интеграция с Hermes Agent
 
-Hermes Agent — open-source AI agent framework с инструментами. Этот плагин добавляет document extraction как native Hermes tools, чтобы агент мог сам вызывать их, когда пользователь просит посмотреть локальный PDF, Office-документ, таблицу, презентацию, архив или изображение.
+Hermes Agent — open-source AI agent framework с инструментами. Этот плагин добавляет извлечение документов как native Hermes tools, чтобы агент мог сам вызывать их, когда пользователь просит посмотреть локальный PDF, Office-документ, таблицу, презентацию, архив или изображение.
 
-Плагин устанавливается через `hermes plugins install`, регистрируется в существующий toolset `file` и начинает работать в CLI/gateway после restart/reset.
+Плагин устанавливается через `hermes plugins install`, регистрируется в существующий toolset `file` и работает в обычных CLI/gateway-сессиях Hermes после restart/reset.
 
-## Зачем
+## Что делает плагин
 
-Агенту лучше читать текст, а не бинарные файлы. Плагин даёт Hermes безопасный поток:
+`hermes-plugin-document-extract` добавляет Hermes tools, которые конвертируют локальные документы и изображения в Markdown перед тем, как агент их читает.
 
 ```text
-локальный документ/изображение → document_extract → cached Markdown → read_file чанками → ответ
+PDF / DOCX / изображение / папка
+        ↓
+document_extract
+        ↓
+~/.hermes/cache/document-extract/*.md
+        ↓
+Hermes читает Markdown через read_file
 ```
 
-Так меньше расходуется контекст, extraction можно повторно использовать, и весь документ не попадает в разговор сразу.
+Это уменьшает расход контекста, не заставляет агента читать бинарные файлы напрямую и ускоряет повторную обработку за счёт cache reuse.
 
-## Инструменты
+## Зачем использовать
 
-| Tool | Что делает |
-|---|---|
-| `document_extract` | Извлекает один локальный файл в cached Markdown и возвращает `markdown_path`. |
-| `document_extract_batch` | Обрабатывает папку или список файлов и возвращает manifest. |
-| `document_extract_status` | Проверяет MarkItDown, Tesseract, OCR-языки, Pillow и состояние cache. |
-| `document_extract_cleanup` | Чистит expired или весь cache extracted Markdown. |
+- **Меньше контекста**: tool возвращает `markdown_path`, а не весь текст документа.
+- **Локальная обработка**: для extraction и OCR не нужны внешние API-ключи.
+- **Удобно для агента**: tools регистрируются в существующий Hermes toolset `file`.
+- **Повторяемость**: cache reuse по SHA-256 для неизменённых файлов.
+- **Приватность при необходимости**: режим `sensitive` отключает preview и использует короткий TTL cache.
 
-Все tools регистрируются в существующий Hermes toolset `file`. Отдельный видимый toolset не создаётся.
+## Tools
+
+| Tool | Когда использовать | Что возвращает |
+|---|---|---|
+| `document_extract` | Один файл: PDF, DOCX, XLSX, PPTX, изображение и т.д. | `markdown_path`, metadata, warnings |
+| `document_extract_batch` | Папка или список файлов | `manifest_path` + результаты по каждому файлу |
+| `document_extract_status` | Диагностика установки | Статус MarkItDown/Tesseract/Pillow/cache |
+| `document_extract_cleanup` | Очистка extracted text | Количество/размер удалённых файлов, dry-run |
+
+Все tools доступны через существующий Hermes toolset `file`. Отдельный видимый toolset или skill не устанавливается.
 
 ## Поддерживаемые форматы
 
-### Документы через MarkItDown
-
-- PDF
-- DOC / DOCX
-- PPT / PPTX
-- XLS / XLSX
-- HTML / HTM
-- EPUB
-- CSV / JSON / XML / YAML
-- ZIP и другие форматы, поддерживаемые MarkItDown
-
-### Изображения через Tesseract OCR
-
-- PNG
-- JPG / JPEG
-- WEBP
-- TIFF / TIF
-- BMP
-
-Для изображений плагин может использовать Tesseract OSD — определение ориентации и скрипта. Если текст повёрнут и доступен Pillow, изображение будет автоматически развёрнуто перед OCR.
-
-## Возможности
-
-- Локальная обработка, без API-ключей.
-- Cached Markdown в `~/.hermes/cache/document-extract/`.
-- Повторное использование extraction по SHA-256 файла.
-- Автоочистка по TTL.
-- Ручная очистка cache.
-- Privacy mode `sensitive`: без preview по умолчанию, hash-only имена, redacted source path, короткий TTL.
-- Batch extraction для папок и списков файлов.
-- Status tool, чтобы агент сам видел недостающие зависимости/OCR-языки.
+| Вход | Движок | Примечания |
+|---|---|---|
+| PDF | MarkItDown | Лучше всего для текстовых PDF; сканированные PDF могут дать мало текста. |
+| DOC / DOCX | MarkItDown | Извлекает текст и структуру документа. |
+| PPT / PPTX | MarkItDown | Извлекает содержимое слайдов, где поддерживается. |
+| XLS / XLSX | MarkItDown | Извлекает таблицы/содержимое workbook. |
+| HTML / HTM / EPUB | MarkItDown | Конвертирует структурированный контент в Markdown. |
+| CSV / JSON / XML / YAML | MarkItDown | Полезно для данных и конфигов. |
+| ZIP | MarkItDown | Зависит от содержимого архива и поддержки MarkItDown. |
+| PNG / JPG / WEBP / TIFF / BMP | Tesseract OCR | По умолчанию `rus+eng`; orientation detection может авто-развернуть изображение, если установлен Pillow. |
 
 ## Установка
 
-Установить плагин с GitHub:
+### 1. Установить плагин
 
 ```bash
 hermes plugins install tak-to-norm/hermes-plugin-document-extract --enable
 ```
 
-Установить Python-зависимости в то же окружение Python, где работает Hermes:
+### 2. Установить Python-зависимости
+
+Устанавливайте в то же Python-окружение, где работает Hermes:
 
 ```bash
 python -m pip install "markitdown[pdf,docx,pptx,xlsx,xls]>=0.1.6" "Pillow>=10.0.0"
 ```
 
-Для OCR изображений отдельно нужен Tesseract.
-
-### Установка Tesseract
-
-Windows:
+Если в окружении Hermes нет `pip`, используйте `uv` с Python executable Hermes:
 
 ```bash
-winget install --id tesseract-ocr.tesseract --accept-source-agreements --accept-package-agreements
+cd ~/.hermes/plugins/document_extract
+uv pip install --python "<path-to-hermes-python>" -r requirements.txt
 ```
 
-macOS:
+### 3. Опционально: установить Tesseract для OCR изображений
 
-```bash
-brew install tesseract tesseract-lang
-```
+Tesseract нужен только для OCR изображений.
 
-Ubuntu / Debian:
+| OS | Команда |
+|---|---|
+| Windows | `winget install --id tesseract-ocr.tesseract --accept-source-agreements --accept-package-agreements` |
+| macOS | `brew install tesseract tesseract-lang` |
+| Ubuntu / Debian | `sudo apt-get update && sudo apt-get install tesseract-ocr tesseract-ocr-eng tesseract-ocr-rus` |
 
-```bash
-sudo apt-get update
-sudo apt-get install tesseract-ocr tesseract-ocr-eng tesseract-ocr-rus
-```
-
-Проверка OCR-языков:
+Проверка:
 
 ```bash
 tesseract --version
 tesseract --list-langs
 ```
 
-После установки перезапустить Hermes:
+Для русского + английского OCR в списке должны быть `eng` и `rus`.
+
+### 4. Перезапустить Hermes
+
+CLI:
 
 ```text
 /reset
 ```
 
-Для gateway:
+Gateway:
 
 ```bash
 hermes gateway restart
 ```
 
-## Ручная локальная установка
-
-Скопируйте папку плагина сюда:
-
-```text
-~/.hermes/plugins/document_extract/
-```
-
-Затем включите:
-
-```bash
-hermes plugins enable document_extract
-```
-
 ## Примеры
 
-Попросить Hermes:
+### Кратко пересказать PDF
+
+Промпт пользователя:
 
 ```text
-Кратко перескажи PDF: C:/Users/me/Documents/report.pdf
+Summarize C:/Users/me/Documents/report.pdf in 5 bullets.
 ```
 
-Ожидаемый поток:
-
-1. Hermes вызывает `document_extract`.
-2. Плагин извлекает файл в Markdown в Hermes cache.
-3. Hermes читает `markdown_path` через `read_file`.
-4. Hermes отвечает по extracted text.
-
-OCR пример:
+Ожидаемый flow агента:
 
 ```text
-Распознай текст на скриншоте: C:/Users/me/Desktop/screenshot.png
+document_extract(path="C:/Users/me/Documents/report.pdf")
+read_file(markdown_path)
 ```
 
-Batch пример:
+### Распознать текст на скриншоте
 
 ```text
-Обработай все документы в C:/Users/me/Documents/inbox и дай краткий список.
+Read the text from C:/Users/me/Desktop/screenshot.png.
 ```
 
-Privacy пример:
+Плагин использует Tesseract OCR. При `orientation="auto"` он может определить повёрнутый текст и автоматически развернуть изображение, если установлен Pillow.
+
+### Обработать папку
 
 ```text
-Это приватный документ. Извлеки только нужное и не показывай preview текста.
+Extract all supported files in C:/Users/me/Documents/inbox and give me a short inventory.
 ```
 
-В таком случае Hermes может вызвать `document_extract(..., sensitive=true)`.
+Ожидаемый flow агента:
 
-## Cache
+```text
+document_extract_batch(path="C:/Users/me/Documents/inbox", recursive=false)
+read_file(manifest_path)
+```
+
+### Приватный документ
+
+```text
+This contract is private. Extract only what you need and don't preview the text.
+```
+
+Ожидаемые настройки tool:
+
+```text
+document_extract(path="...", sensitive=true, preview_chars=0)
+```
+
+Sensitive mode использует redacted source metadata, hash-only имена файлов, отключённый preview по умолчанию и более короткий TTL.
+
+### Проверить установку
+
+```text
+Check whether document extraction and OCR are ready.
+```
+
+Ожидаемый flow агента:
+
+```text
+document_extract_status()
+```
+
+### Очистить cache extracted text
+
+```text
+Clean the document extraction cache.
+```
+
+Ожидаемый flow агента:
+
+```text
+document_extract_cleanup(expired_only=true)
+```
+
+## Cache и приватность
 
 Extracted Markdown хранится тут:
 
@@ -193,31 +209,43 @@ Extracted Markdown хранится тут:
 ~/.hermes/cache/document-extract/
 ```
 
-TTL по умолчанию:
+| Режим | Preview по умолчанию | Имя output-файла | Source path в metadata | TTL по умолчанию |
+|---|---:|---|---|---:|
+| Normal | 500 символов | safe source stem + hash | виден | 7 дней |
+| Sensitive | 0 символов | только hash | скрыт | 1 день |
+| Cache disabled | настраивается | временный cached output | зависит от режима | 1 час |
 
-| Режим | TTL |
-|---|---:|
-| Обычный | 7 дней |
-| Sensitive | 1 день |
-| Cache disabled | 1 час |
+Для ручной очистки используйте `document_extract_cleanup`. Истёкшие файлы также чистятся автоматически при запуске extraction.
 
-Для ручной очистки используется `document_extract_cleanup`.
+## Ограничения
 
-## Плюсы и минусы
+- Для OCR нужен системный Tesseract; одних Python-зависимостей недостаточно.
+- Качество OCR зависит от установленных language data и качества изображения.
+- MarkItDown — практичный Markdown extractor, но не идеальный layout-preserving converter.
+- Сканированные PDF могут дать мало текста, потому что OCR сейчас image-based; для OCR-heavy документов используйте скриншоты/изображения страниц.
+- Плагин не отправляет файлы во внешние API, но extracted Markdown хранится локально до очистки по TTL.
 
-| Плюсы | Минусы |
-|---|---|
-| Локальная обработка документов | Для OCR нужно отдельно установить Tesseract |
-| Не нужен API-ключ | Качество OCR зависит от установленных языков |
-| Экономит контекст: возвращает путь, а не весь текст | MarkItDown не всегда идеально сохраняет сложный layout |
-| Много поддерживаемых форматов | Сканированные PDF могут требовать OCR страниц/скриншотов |
-| Чисто встраивается в Hermes `file` toolset | После установки нужен restart/reset |
+## Разработка
+
+Локальная установка плагина:
+
+```bash
+cp -r . ~/.hermes/plugins/document_extract
+hermes plugins enable document_extract
+```
+
+Базовые проверки:
+
+```bash
+python -m py_compile tools.py schemas.py __init__.py
+python -m pytest tests -q
+```
 
 ## Лицензия
 
-Плагин распространяется под MIT License.
+Плагин распространяется под [MIT License](LICENSE).
 
-Сторонние зависимости:
+Сторонние tools/libraries:
 
 - MarkItDown — MIT
 - Tesseract OCR — Apache-2.0

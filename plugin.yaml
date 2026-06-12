@@ -1,5 +1,5 @@
 name: document_extract
-version: 0.2.0
+version: 0.1.0
 description: "Convert local documents and images to cached Markdown before Hermes Agent reads them."
 author: tak-to-norm
 license: MIT

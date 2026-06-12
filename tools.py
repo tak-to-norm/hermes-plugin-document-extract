@@ -33,7 +33,7 @@ except Exception:  # pragma: no cover - allows standalone smoke checks outside H
         return json.dumps(payload, ensure_ascii=False)
 
 
-PLUGIN_VERSION = "0.2.0"
+PLUGIN_VERSION = "0.1.0"
 CACHE_SCHEMA_VERSION = "2"
 DEFAULT_TTL_DAYS = 7.0
 SENSITIVE_TTL_DAYS = 1.0
