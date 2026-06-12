@@ -140,7 +140,62 @@ def _pillow_available() -> bool:
 
 
 def _tesseract_path() -> str | None:
-    return shutil.which("tesseract")
+    """Find Tesseract even when the current process PATH is stale after install."""
+    found = shutil.which("tesseract")
+    if found:
+        return found
+
+    env_cmd = os.getenv("TESSERACT_CMD")
+    candidates = [
+        Path(env_cmd) if env_cmd else None,
+        Path("C:/Program Files/Tesseract-OCR/tesseract.exe"),
+        Path("C:/Program Files (x86)/Tesseract-OCR/tesseract.exe"),
+    ]
+    for candidate in candidates:
+        if candidate and candidate.exists():
+            return str(candidate)
+    return None
+
+
+def _candidate_tessdata_dirs() -> list[Path]:
+    """Known places where Tesseract language data may live."""
+    candidates: list[Path] = []
+    env_prefix = os.getenv("TESSDATA_PREFIX")
+    if env_prefix:
+        prefix = Path(env_prefix).expanduser()
+        candidates.extend([prefix, prefix / "tessdata"])
+
+    hermes_home = _get_hermes_home()
+    candidates.extend([
+        hermes_home / "tessdata",
+        Path.home() / ".hermes" / "tessdata",
+        Path("C:/Program Files/Tesseract-OCR/tessdata"),
+        Path("C:/Program Files (x86)/Tesseract-OCR/tessdata"),
+    ])
+
+    unique: list[Path] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        key = str(candidate.resolve(strict=False)).lower()
+        if key not in seen and candidate.exists():
+            unique.append(candidate)
+            seen.add(key)
+    return unique
+
+
+def _resolve_tessdata_dir(languages: str, *, need_osd: bool = False, explicit: str | None = None) -> Path | None:
+    """Pick a tessdata dir that contains all requested language files when possible."""
+    if explicit:
+        return _normalize_path(explicit)
+    requested = {part.strip() for part in (languages or "").split("+") if part.strip()}
+    if need_osd:
+        requested.add("osd")
+    if not requested:
+        return None
+    for directory in _candidate_tessdata_dirs():
+        if all((directory / f"{lang}.traineddata").exists() for lang in requested):
+            return directory
+    return None
 
 
 def _tesseract_available() -> bool:
@@ -169,23 +224,39 @@ def _tesseract_version() -> str | None:
         return None
 
 
-def _tesseract_languages() -> list[str]:
+def _parse_tesseract_langs(text: str) -> list[str]:
+    langs: list[str] = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.lower().startswith("list of available languages"):
+            continue
+        if re.match(r"^[A-Za-z0-9_+-]+$", line):
+            langs.append(line)
+    return langs
+
+
+def _tesseract_languages(tessdata_dir: str | Path | None = None) -> list[str]:
     path = _tesseract_path()
     if not path:
         return []
-    try:
-        proc = _run_command([path, "--list-langs"], timeout=30)
-        text = (proc.stdout or "") + "\n" + (proc.stderr or "")
-        langs: list[str] = []
-        for line in text.splitlines():
-            line = line.strip()
-            if not line or line.lower().startswith("list of available languages"):
-                continue
-            if re.match(r"^[A-Za-z0-9_+-]+$", line):
-                langs.append(line)
-        return sorted(set(langs))
-    except Exception:
-        return []
+    dirs: list[Path | None]
+    if tessdata_dir:
+        dirs = [_normalize_path(str(tessdata_dir))]
+    else:
+        dirs = [None] + _candidate_tessdata_dirs()
+
+    langs: list[str] = []
+    for directory in dirs:
+        try:
+            cmd = [path, "--list-langs"]
+            if directory:
+                cmd.extend(["--tessdata-dir", str(directory)])
+            proc = _run_command(cmd, timeout=30)
+            text = (proc.stdout or "") + "\n" + (proc.stderr or "")
+            langs.extend(_parse_tesseract_langs(text))
+        except Exception:
+            continue
+    return sorted(set(langs))
 
 
 def _read_text_file(src: Path) -> str:
@@ -223,7 +294,7 @@ def _extract_with_markitdown(src: Path) -> tuple[str, list[str]]:
     return text, warnings
 
 
-def _detect_orientation(src: Path) -> tuple[dict[str, Any], list[str]]:
+def _detect_orientation(src: Path, tessdata_dir: str | Path | None = None) -> tuple[dict[str, Any], list[str]]:
     """Use Tesseract OSD to detect orientation. Non-fatal on failure."""
     warnings: list[str] = []
     tesseract = _tesseract_path()
@@ -231,7 +302,10 @@ def _detect_orientation(src: Path) -> tuple[dict[str, Any], list[str]]:
         return {}, ["Tesseract is not installed; orientation detection skipped."]
 
     try:
-        proc = _run_command([tesseract, str(src), "stdout", "-l", "osd", "--psm", "0"], timeout=60)
+        cmd = [tesseract, str(src), "stdout", "-l", "osd", "--psm", "0"]
+        if tessdata_dir:
+            cmd.extend(["--tessdata-dir", str(tessdata_dir)])
+        proc = _run_command(cmd, timeout=60)
     except Exception as exc:
         return {}, [f"Tesseract OSD failed: {type(exc).__name__}: {exc}"]
 
@@ -303,9 +377,10 @@ def _extract_with_tesseract(
         )
 
     ocr_src = src
+    resolved_tessdata_dir = _resolve_tessdata_dir(languages or "rus+eng", need_osd=(orientation == "auto"), explicit=tessdata_dir)
     rotated_tmp: Path | None = None
     if orientation == "auto":
-        orientation_info, osd_warnings = _detect_orientation(src)
+        orientation_info, osd_warnings = _detect_orientation(src, resolved_tessdata_dir)
         warnings.extend(osd_warnings)
         rotate = int(orientation_info.get("rotate") or 0)
         if rotate % 360:
@@ -318,8 +393,8 @@ def _extract_with_tesseract(
                 orientation_info["auto_rotated"] = False
 
     cmd = [tesseract, str(ocr_src), "stdout", "-l", languages or "rus+eng", "--psm", str(int(psm or 11))]
-    if tessdata_dir:
-        cmd.extend(["--tessdata-dir", str(_normalize_path(tessdata_dir))])
+    if resolved_tessdata_dir:
+        cmd.extend(["--tessdata-dir", str(resolved_tessdata_dir)])
 
     try:
         proc = _run_command(cmd, timeout=180)
@@ -341,11 +416,13 @@ def _extract_with_tesseract(
     if len(text.strip()) < 20:
         warnings.append("OCR returned very little text; the image may contain little readable text or OCR quality is poor.")
 
-    available = set(_tesseract_languages())
+    available = set(_tesseract_languages(resolved_tessdata_dir))
     requested = {part.strip() for part in (languages or "").split("+") if part.strip()}
     missing = sorted(requested - available) if available else []
     if missing:
         warnings.append(f"Requested Tesseract language data not found: {', '.join(missing)}")
+    if resolved_tessdata_dir:
+        orientation_info.setdefault("tessdata_dir", str(resolved_tessdata_dir))
 
     return text, warnings, orientation_info
 
@@ -601,6 +678,7 @@ def _extract_one(args: dict[str, Any], *, run_cleanup: bool = True) -> dict[str,
 
 def _dependency_status() -> dict[str, Any]:
     langs = _tesseract_languages()
+    tessdata_dirs = [str(path) for path in _candidate_tessdata_dirs()]
     return {
         "markitdown_available": _markitdown_available(),
         "markitdown_version": _markitdown_version(),
@@ -608,7 +686,8 @@ def _dependency_status() -> dict[str, Any]:
         "tesseract_path": _tesseract_path(),
         "tesseract_version": _tesseract_version(),
         "tesseract_languages": langs,
-        "recommended_ocr_languages_present": all(lang in langs for lang in ["eng", "rus"]) if langs else False,
+        "tessdata_dirs": tessdata_dirs,
+        "recommended_ocr_languages_present": all(lang in langs for lang in ["eng", "rus", "osd"]) if langs else False,
         "pillow_available": _pillow_available(),
     }
 

@@ -109,7 +109,7 @@ tesseract --version
 tesseract --list-langs
 ```
 
-For Russian + English OCR, `eng` and `rus` should be listed.
+For Russian + English OCR, `eng` and `rus` should be listed. The plugin checks both system Tesseract language data and `~/.hermes/tessdata`, which is useful on Windows when the installer only includes `eng`/`osd`.
 
 ### 4. Restart Hermes
 

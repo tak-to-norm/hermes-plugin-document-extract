@@ -109,7 +109,7 @@ tesseract --version
 tesseract --list-langs
 ```
 
-Для русского + английского OCR в списке должны быть `eng` и `rus`.
+Для русского + английского OCR в списке должны быть `eng` и `rus`. Плагин проверяет и системную папку Tesseract, и `~/.hermes/tessdata` — это удобно на Windows, где installer часто ставит только `eng`/`osd`.
 
 ### 4. Перезапустить Hermes
 
