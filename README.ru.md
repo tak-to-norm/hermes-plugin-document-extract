@@ -71,47 +71,44 @@ Hermes читает Markdown через read_file
 
 ## Установка
 
-### 1. Установить плагин
+### Рекомендуемый вариант: setup-скрипт
 
 ```bash
 hermes plugins install tak-to-norm/hermes-plugin-document-extract --enable
-```
-
-### 2. Установить Python-зависимости
-
-Устанавливайте в то же Python-окружение, где работает Hermes:
-
-```bash
-python -m pip install "markitdown[pdf,docx,pptx,xlsx,xls]>=0.1.6" "Pillow>=10.0.0"
-```
-
-Если в окружении Hermes нет `pip`, используйте `uv` с Python executable Hermes:
-
-```bash
 cd ~/.hermes/plugins/document_extract
-uv pip install --python "<path-to-hermes-python>" -r requirements.txt
+bash scripts/setup.sh
 ```
 
-### 3. Опционально: установить Tesseract для OCR изображений
+Скрипт спросит, какой режим установить:
 
-Tesseract нужен только для OCR изображений.
+```text
+1) Basic — только документы: PDF/DOCX/XLSX/PPTX/HTML/TXT через MarkItDown
+2) Full  — Basic + OCR изображений/скриншотов через Tesseract (eng/rus/osd)
+```
 
-| OS | Команда |
-|---|---|
-| Windows | `winget install --id tesseract-ocr.tesseract --accept-source-agreements --accept-package-agreements` |
-| macOS | `brew install tesseract tesseract-lang` |
-| Ubuntu / Debian | `sudo apt-get update && sudo apt-get install tesseract-ocr tesseract-ocr-eng tesseract-ocr-rus` |
+Он определяет Windows/macOS/Linux, находит Python-окружение Hermes, ставит Python-зависимости именно туда, проверяет MarkItDown/Pillow, а в Full-режиме проверяет или устанавливает Tesseract и готовит OCR language data в `~/.hermes/tessdata`.
 
-Проверка:
+Non-interactive режим:
 
 ```bash
-tesseract --version
-tesseract --list-langs
+bash scripts/setup.sh --basic -y
+bash scripts/setup.sh --full -y
 ```
 
-Для русского + английского OCR в списке должны быть `eng` и `rus`. Плагин проверяет и системную папку Tesseract, и `~/.hermes/tessdata` — это удобно на Windows, где installer часто ставит только `eng`/`osd`.
+Full-режим может запросить права package manager/admin, если Tesseract ещё не установлен.
 
-### 4. Перезапустить Hermes
+### Самый простой вариант: попросить агента
+
+Можно просто отправить ссылку на этот репозиторий Hermes Agent и попросить установить плагин:
+
+```text
+Install this Hermes plugin in Full mode and verify it works:
+https://github.com/tak-to-norm/hermes-plugin-document-extract
+```
+
+Агент должен установить plugin, запустить `bash scripts/setup.sh --full`, проверить `document_extract_status`, а затем попросить сделать `/reset` или перезапустить gateway.
+
+### Перезапустить Hermes
 
 CLI:
 
@@ -124,6 +121,16 @@ Gateway:
 ```bash
 hermes gateway restart
 ```
+
+### Manual fallback
+
+Ручная установка — не основной путь. Если setup-скрипт не сработал, выполните:
+
+```bash
+bash scripts/setup.sh --help
+```
+
+Затем установите недостающую зависимость, которую назвал скрипт, и запустите его ещё раз.
 
 ## Примеры
 

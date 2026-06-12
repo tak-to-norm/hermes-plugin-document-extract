@@ -14,6 +14,13 @@ This plugin can use the following third-party tools and libraries.
 - License: Apache License 2.0
 - Used for OCR on local image files.
 
+## Tesseract language data
+
+- Project: <https://github.com/tesseract-ocr/tessdata_fast>
+- License: Apache License 2.0
+- Used for optional OCR language data (`eng`, `rus`, `osd`).
+- The setup script may download missing language data into the user's local `~/.hermes/tessdata` directory.
+
 ## Pillow
 
 - Project: <https://python-pillow.org/>
@@ -21,4 +28,4 @@ This plugin can use the following third-party tools and libraries.
 - Used only to rotate images when Tesseract OSD detects rotated text.
 
 This repository does not vendor MarkItDown, Tesseract binaries, Tesseract language data, or Pillow source code.
-Users install dependencies separately in their own environment.
+Dependencies are installed or downloaded into the user's local environment during setup.
