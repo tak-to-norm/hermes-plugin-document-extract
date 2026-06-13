@@ -45,6 +45,18 @@ This keeps model context smaller, avoids direct binary reads, and makes repeated
 - **Repeatable**: cache reuse by file hash and extraction settings.
 - **Privacy-aware**: `sensitive=true` redacts source paths and disables previews by default.
 
+## Who is this for?
+
+Use this plugin if you want Hermes Agent to work with local PDFs, scans, screenshots, Office documents, and image files without loading entire documents into the model context.
+
+Good fit for:
+
+- LLM wiki / knowledge-base workflows
+- local document analysis
+- PDF-to-Markdown pipelines
+- OCR for screenshots and scanned pages
+- agent workflows where context usage matters
+
 ## LLM wiki use case
 
 The idea for this plugin came from a practical `llm-wiki` problem: users often collect PDFs, scans, screenshots, slides, and office documents, but an agent should not load those source files directly into the model context.
