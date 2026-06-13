@@ -37,25 +37,19 @@ Hermes reads the Markdown with read_file
 
 This keeps model context smaller, avoids direct binary reads, and makes repeated extraction faster through cache reuse.
 
-## Why use it
+## Why this plugin exists
 
-- **Lower context usage**: the tool returns a `markdown_path`, not the whole document text.
-- **Local-first**: no external API key is required for extraction or OCR.
-- **Agent-friendly**: registered under Hermes' existing `file` toolset.
-- **Repeatable**: cache reuse by file hash and extraction settings.
-- **Privacy-aware**: `sensitive=true` redacts source paths and disables previews by default.
+AI agents are increasingly used to work with local knowledge: PDFs, scans, screenshots, presentations, spreadsheets, and notes. The problem is that these files are usually binary, heavy, and expensive to read directly in model context.
 
-## Who is this for?
+`hermes-plugin-document-extract` gives Hermes Agent a simple local-first path:
 
-Use this plugin if you want Hermes Agent to work with local PDFs, scans, screenshots, Office documents, and image files without loading entire documents into the model context.
+- convert documents and images into cached Markdown;
+- return a `markdown_path` instead of dumping full text into the conversation;
+- let the agent read only the sections it actually needs;
+- reuse extraction results across repeated requests;
+- keep OCR and document processing local by default.
 
-Good fit for:
-
-- LLM wiki / knowledge-base workflows
-- local document analysis
-- PDF-to-Markdown pipelines
-- OCR for screenshots and scanned pages
-- agent workflows where context usage matters
+This makes the plugin especially useful for `llm-wiki`, research folders, personal archives, and any workflow where context usage and privacy matter.
 
 ## LLM wiki use case
 
