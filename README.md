@@ -42,8 +42,21 @@ This keeps model context smaller, avoids direct binary reads, and makes repeated
 - **Lower context usage**: the tool returns a `markdown_path`, not the whole document text.
 - **Local-first**: no external API key is required for extraction or OCR.
 - **Agent-friendly**: registered under Hermes' existing `file` toolset.
-- **Repeatable**: SHA-256 cache reuse for unchanged files.
-- **Private by default where needed**: `sensitive` mode suppresses previews and uses shorter cache TTL.
+- **Repeatable**: cache reuse by file hash and extraction settings.
+- **Privacy-aware**: `sensitive=true` redacts source paths and disables previews by default.
+
+## LLM wiki use case
+
+The idea for this plugin came from a practical `llm-wiki` problem: users often collect PDFs, scans, screenshots, slides, and office documents, but an agent should not load those source files directly into the model context.
+
+`hermes-plugin-document-extract` turns those files into cached Markdown first. Then Hermes can search and read only the relevant Markdown chunks when building or using an `llm-wiki`.
+
+Example flow:
+
+1. Put source files into an `llm-wiki` inbox folder.
+2. Run `document_extract_batch` on that folder.
+3. Use the returned `markdown_path` files as clean Markdown inputs.
+4. Let the agent read only the needed sections instead of spending context on entire documents.
 
 ## Tools
 
